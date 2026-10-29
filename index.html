@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0C10">
+<title>Ticket Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{--bg:#0B0C10;--surf:#14151C;--surf2:#1B1D26;--line:#262833;--gold:#C9A96E;--txt:#F4F0E6;--mut:#9A978F;--ok:#3FB68B;--bad:#E5566D;--warn:#E3A857;
+--serif:'Cormorant Garamond',Georgia,serif;--sans:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--txt);font:15px/1.5 var(--sans);min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.hide{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,12,16,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header h1{font:700 22px/1.1 var(--serif);letter-spacing:.02em;color:var(--gold)}
+header small{color:var(--mut);font-size:12px}
+.who{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
+.who b{color:var(--txt);font-weight:600}
+.ib{padding:8px 10px;border-radius:10px;color:var(--mut);border:1px solid var(--line)}
+.ib:hover{color:var(--gold)}
+main{max-width:980px;margin:0 auto;padding:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat span{font-size:12px;color:var(--mut)}
+.stat b{display:block;font:700 30px/1.1 var(--serif);font-variant-numeric:tabular-nums}
+.stat.k b{color:var(--gold)}
+.grid{display:grid;gap:18px}
+@media(min-width:820px){.grid{grid-template-columns:5fr 6fr;align-items:start}}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:20px}
+h2{font:700 24px/1.2 var(--serif);margin-bottom:14px}
+label{display:block;font-size:12px;color:var(--mut);margin:12px 0 5px;letter-spacing:.02em}
+input,select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px}
+input:focus,select:focus{border-color:var(--gold);outline:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;margin-top:18px;padding:14px;border-radius:12px;background:var(--gold);color:#17130A;font-weight:700;transition:transform .1s}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line);margin-top:0;width:auto;padding:10px 14px;font-size:14px;font-weight:600}
+.btn:disabled{opacity:.5}
+.acts{display:flex;gap:8px;margin-bottom:12px;justify-content:flex-end}
+/* ticket */
+.ticket{--tc:#C7CAD2;position:relative;max-width:400px;margin:0 auto;padding:26px 24px 20px;border-radius:20px;border:1.5px solid var(--tc);
+background:radial-gradient(120% 80% at 50% 0,color-mix(in srgb,var(--tc) 14%,#14151C),#0E0F14 70%)}
+.ticket.t1{--tc:var(--gold)}.ticket.t2{--tc:#E0B3A0}
+.tk-top{text-align:center}
+.tk-tag{font-size:12px;color:var(--tc);letter-spacing:.14em;text-transform:uppercase}
+.ticket h2{font:700 34px/1.1 var(--serif);margin:6px 0 8px;color:var(--txt)}
+.tk-meta{font-size:13px;color:var(--mut)}
+.perf{position:relative;border-top:2px dashed color-mix(in srgb,var(--tc) 45%,transparent);margin:20px -24px}
+.perf::before,.perf::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:50%;background:var(--bg);border:1.5px solid var(--tc)}
+.perf::before{left:-12px;clip-path:inset(0 0 0 50%)}.perf::after{right:-12px;clip-path:inset(0 50% 0 0)}
+.tk-body{display:flex;gap:18px;align-items:center}
+.qrbox{background:#fff;padding:9px;border-radius:12px;flex:none;line-height:0}
+.tk-info{min-width:0;flex:1}
+.tk-info label{margin:0 0 2px;font-size:11px}
+.tk-name{font:700 24px/1.15 var(--serif);margin-bottom:12px;overflow-wrap:anywhere}
+.tk-admit{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px}
+.badge{padding:2px 10px;border-radius:99px;border:1px solid var(--tc);color:var(--tc);font-size:13px;font-weight:600}
+.tk-id{margin:16px 0 8px;text-align:center;font:700 17px var(--mono);letter-spacing:.14em;color:var(--tc)}
+.tk-foot{text-align:center;font-size:11px;color:var(--mut)}
+@media(max-width:380px){.tk-body{flex-direction:column;text-align:center}.tk-admit{justify-content:center}}
+/* scanner */
+.view{position:relative;max-width:420px;margin:0 auto;aspect-ratio:1;background:#000;border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+#reader{width:100%;height:100%}#reader video{object-fit:cover!important}
+.camov{position:absolute;inset:0;background:var(--surf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--mut);text-align:center;padding:20px}
+.last{max-width:420px;margin:12px auto 0;font-size:14px;color:var(--mut);text-align:center;min-height:21px}
+.flash{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:8px}
+.flash.ok{background:#0F5A44}.flash.warn{background:#7A5314}.flash.bad{background:#7D2233}
+.flash h3{font:700 34px var(--serif);letter-spacing:.02em}.flash .nm{font:700 46px/1.1 var(--serif);overflow-wrap:anywhere}.flash p{opacity:.85}
+/* guests */
+.tools{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.tools input{flex:1;min-width:160px}.tools select{width:auto}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:14px 4px;border-bottom:1px solid var(--line)}
+.item:last-child{border:0}.item .n{font-weight:600;overflow-wrap:anywhere}.item .m{font-size:13px;color:var(--mut)}
+.item .id{font:500 13px var(--mono);color:var(--gold)}
+.st{font-size:12px;font-weight:600;padding:2px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut);align-self:start;white-space:nowrap}
+.st.in{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}.st.part{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+.mini{display:flex;gap:6px;justify-content:flex-end}.mini button{font-size:13px;color:var(--mut);padding:2px 6px}.mini button:hover{color:var(--gold)}
+.empty{padding:34px 10px;text-align:center;color:var(--mut)}
+.admin-only{display:none!important}.is-admin .admin-only{display:inline-flex!important}.is-admin div.admin-only{display:block!important}
+/* tabs */
+nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(20,21,28,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;padding:10px 4px;color:var(--mut);font-size:13px;font-weight:600;border-radius:12px}
+nav button.on{color:var(--gold);background:var(--surf2)}
+/* modal / toast */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(5,6,8,.9);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.modal{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:22px;width:100%;max-width:460px;margin:auto}
+.pin{text-align:center;letter-spacing:.5em;font:700 26px var(--mono)}
+.err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;text-align:center}
+.tier{display:grid;grid-template-columns:1fr 80px 60px 32px;gap:6px;margin-bottom:6px}.tier input{padding:9px 10px;font-size:14px}
+.tier button{color:var(--bad)}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;width:calc(100% - 32px);max-width:380px}
+.t{padding:12px 16px;border-radius:12px;background:var(--surf2);border:1px solid var(--line);font-size:14px;text-align:center}.t.bad{border-color:var(--bad)}.t.ok{border-color:var(--ok)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="login" class="ov hide">
+  <form class="modal" id="loginForm" style="max-width:340px;text-align:center">
+    <h2 id="loginTitle">Sign in</h2>
+    <p style="color:var(--mut);font-size:14px;margin-bottom:16px">Enter your seller PIN to start.</p>
+    <input id="pinIn" class="pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••" required>
+    <button class="btn" type="submit">Unlock</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
+<header>
+  <div style="min-width:0"><h1 id="hTitle">Ticket Manager</h1><small id="hVenue"></small></div>
+  <div class="who"><b id="who">-</b>
+    <button class="ib admin-only" id="gear" aria-label="Event settings">⚙</button>
+    <button class="ib" id="logout" aria-label="Sign out">Sign out</button></div>
+</header>
+
+<main>
+  <div class="stats">
+    <div class="stat"><span>Tickets issued</span><b id="sIssued">0</b></div>
+    <div class="stat k"><span>Guests in</span><b id="sIn">0</b></div>
+    <div class="stat"><span>Still expected</span><b id="sLeft">0</b></div>
+  </div>
+
+  <section id="tab-issue" class="grid">
+    <div class="panel">
+      <h2>Issue a ticket</h2>
+      <form id="issueForm">
+        <label for="fName">Guest name</label><input id="fName" required maxlength="80" autocomplete="off">
+        <label for="fPhone">Phone number</label><input id="fPhone" type="tel" required maxlength="30" placeholder="073 123 4567">
+        <div class="row2">
+          <div><label for="fTier">Ticket type</label><select id="fTier"></select></div>
+          <div><label for="fPrice">Price paid</label><input id="fPrice" type="number" min="0" step="any" inputmode="decimal"></div>
+        </div>
+        <label for="fPay">Payment</label>
+        <select id="fPay"><option>Cash</option><option>EFT</option><option>Card</option><option>Complimentary</option></select>
+        <button class="btn" id="issueBtn" type="submit">Issue ticket</button>
+      </form>
+    </div>
+    <div>
+      <div class="acts">
+        <button class="btn ghost" id="dlBtn" disabled>Download</button>
+        <button class="btn ghost" id="shBtn" disabled>Share image</button>
+      </div>
+      <div class="ticket" id="ticket"></div>
+    </div>
+  </section>
+
+  <section id="tab-scan" class="hide">
+    <div class="view">
+      <div id="reader"></div>
+      <div class="camov" id="camOv"><div>Camera is off to save battery.</div></div>
+    </div>
+    <div class="last" id="lastScan">Point the camera at a ticket QR code.</div>
+    <div style="max-width:420px;margin:12px auto 0;display:grid;gap:12px">
+      <button class="btn" id="camBtn" style="margin:0">Start camera</button>
+      <form id="manualForm" class="row2" style="grid-template-columns:1fr auto">
+        <input id="manualIn" placeholder="Or type a ticket ID" autocapitalize="characters" required>
+        <button class="btn" style="margin:0;width:auto;padding:12px 18px">Check</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="tab-guests" class="hide">
+    <div class="panel">
+      <div class="tools">
+        <input id="search" type="search" placeholder="Search name, phone, ID, seller">
+        <select id="filter" aria-label="Filter"><option value="ALL">All</option><option value="UNUSED">Not in</option><option value="PARTIAL">Part in</option><option value="CHECKED_IN">In</option></select>
+      </div>
+      <div class="tools admin-only" style="margin-top:-4px">
+        <button class="btn ghost" id="csvBtn">Export CSV</button>
+        <button class="btn ghost" id="resetBtn" style="color:var(--bad)">Delete all tickets</button>
+      </div>
+      <div id="list"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="issue" class="on">Issue</button>
+  <button data-tab="scan">Scan</button>
+  <button data-tab="guests">Guests <span id="gCount">0</span></button>
+</nav>
+
+<div id="flash" class="flash hide"></div>
+<div id="toast"></div>
+
+<div id="settings" class="ov hide">
+  <form class="modal" id="setForm">
+    <h2>Event settings</h2>
+    <label for="sTitle">Event name</label><input id="sTitle" required>
+    <label for="sTag">Tagline</label><input id="sTag">
+    <div class="row2"><div><label for="sDate">Date</label><input id="sDate" required></div><div><label for="sTime">Time</label><input id="sTime"></div></div>
+    <label for="sVenue">Venue</label><input id="sVenue" required>
+    <div class="row2"><div><label for="sDress">Dress code</label><input id="sDress"></div><div><label for="sCur">Currency</label><input id="sCur" maxlength="4"></div></div>
+    <div class="row2"><div><label for="sPre">ID prefix</label><input id="sPre" required maxlength="8" style="text-transform:uppercase"></div><div><label for="sAcc">Accent colour</label><input id="sAcc" type="color" style="padding:4px;height:48px"></div></div>
+    <label for="sFoot">Ticket footer text</label><input id="sFoot">
+    <label>Ticket types</label><div id="tierRows"></div>
+    <button type="button" class="btn ghost" id="addTier">Add ticket type</button>
+    <p class="hint">Changing the prefix only affects tickets issued from now on.</p>
+    <div class="row2" style="margin-top:14px"><button type="button" class="btn ghost" id="setCancel" style="width:100%">Cancel</button><button class="btn" style="margin:0">Save changes</button></div>
+  </form>
+</div>
+
+<script>
+/* ===== Connection (only thing to edit in code) ===== */
+const SB_URL = 'https://wciubytdgfgdsfbskcmu.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjaXVieXRkZ2ZnZHNmYnNrY211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyOTA5MjAsImV4cCI6MjEwODg2NjkyMH0._26QbBzbZrGXB_rPe1mc06ye4aq4SWTvoCaJBW-W-PE';
+/* Everything about the event itself lives in Supabase and is edited with the gear icon. */
+
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DEF = {title:'Ticket Manager',tagline:'',date:'',time:'',venue:'',prefix:'TKT-',currency:'R',dressCode:'',footer:'Present this QR code at the entrance.',accent:'#C9A96E',tiers:[{name:'Single',price:0,admits:1}]};
+let cfg = DEF, pin = localStorage.getItem('tm_pin'), user = null, tickets = [], current = null, scanner = null, last = {id:'',at:0}, timer = null;
+
+async function rpc(fn, args = {}) { const {data, error} = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; }
+function toast(msg, type = 'ok') { const e = document.createElement('div'); e.className = 't ' + type; e.textContent = msg; $('toast').appendChild(e); setTimeout(() => e.remove(), 3200); }
+const money = n => (cfg.currency || '') + Number(n || 0).toLocaleString();
+
+/* ===== Config -> UI ===== */
+function applyCfg() {
+  document.documentElement.style.setProperty('--gold', cfg.accent || '#C9A96E');
+  document.title = cfg.title + ' · Tickets';
+  $('hTitle').textContent = cfg.title; $('hVenue').textContent = [cfg.date, cfg.venue].filter(Boolean).join(' · ');
+  $('loginTitle').textContent = cfg.title;
+  const sel = $('fTier'), keep = sel.value;
+  sel.innerHTML = cfg.tiers.map((t, i) => `<option value="${i}">${esc(t.name)}${t.price ? ' · ' + esc(money(t.price)) : ''}</option>`).join('');
+  if (keep && cfg.tiers[keep]) sel.value = keep;
+  syncPrice(); showTicket(current || sample());
+}
+const sample = () => ({ticket_id: cfg.prefix + 'XXXXXX', name: 'Guest name', tier: cfg.tiers[0]?.name || '', admits: cfg.tiers[0]?.admits || 1});
+function syncPrice() { const t = cfg.tiers[$('fTier').value] || {}; $('fPrice').value = t.price || 0; }
+$('fTier').onchange = syncPrice;
+
+/* ===== Ticket ===== */
+function showTicket(t) {
+  const idx = Math.max(0, cfg.tiers.findIndex(x => x.name === t.tier));
+  const el = $('ticket'); el.className = 'ticket t' + Math.min(idx, 2);
+  el.innerHTML = `<div class="tk-top"><div class="tk-tag">${esc(cfg.tagline)}</div><h2>${esc(cfg.title)}</h2>
+    <div class="tk-meta">${esc(cfg.date)}${cfg.time ? ' · ' + esc(cfg.time) : ''}</div><div class="tk-meta">${esc(cfg.venue)}</div></div>
+    <div class="perf"></div>
+    <div class="tk-body"><div class="qrbox"><div id="qr"></div></div><div class="tk-info">
+      <label>Guest</label><div class="tk-name">${esc(t.name)}</div>
+      <div class="tk-admit"><span class="badge">${esc(t.tier)}</span>${t.admits > 1 ? 'Admits ' + t.admits : 'Admits one'}</div>
+      ${cfg.dressCode ? `<label>Dress code</label><div style="font-size:14px">${esc(cfg.dressCode)}</div>` : ''}</div></div>
+    <div class="tk-id">${esc(t.ticket_id)}</div><div class="tk-foot">${esc(cfg.footer)}</div>`;
+  new QRCode($('qr'), {text: t.ticket_id, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M});
+  const real = !t.ticket_id.endsWith('XXXXXX');
+  $('dlBtn').disabled = $('shBtn').disabled = !real;
+}
+async function ticketBlob() {
+  const c = await html2canvas($('ticket'), {scale: 3, backgroundColor: '#0B0C10'});
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+$('dlBtn').onclick = async () => {
+  const b = await ticketBlob(), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = `Ticket_${current.ticket_id}_${current.name.replace(/\s+/g, '_')}.png`; a.click(); URL.revokeObjectURL(a.href);
+};
+$('shBtn').onclick = async () => {
+  const b = await ticketBlob(), f = new File([b], `Ticket_${current.ticket_id}.png`, {type: 'image/png'});
+  if (navigator.canShare && navigator.canShare({files: [f]})) { try { await navigator.share({files: [f], title: cfg.title, text: `Ticket for ${current.name}`}); } catch (e) {} }
+  else { $('dlBtn').click(); toast('Sharing isn\'t supported here, so the ticket was downloaded.'); }
+};
+
+/* ===== Issue ===== */
+$('issueForm').onsubmit = async e => {
+  e.preventDefault(); const btn = $('issueBtn'); btn.disabled = true;
+  const tier = cfg.tiers[$('fTier').value];
+  try {
+    const t = await rpc('issue_ticket', {p_pin: pin, p_name: $('fName').value, p_phone: $('fPhone').value, p_tier: tier.name,
+      p_admits: tier.admits, p_price: Number($('fPrice').value) || 0, p_payment: $('fPay').value});
+    current = t; showTicket(t); $('dlBtn').disabled = $('shBtn').disabled = false;
+    $('fName').value = ''; $('fPhone').value = ''; toast('Ticket ' + t.ticket_id + ' issued'); refresh();
+  } catch (err) { toast(err.message, 'bad'); }
+  btn.disabled = false;
+};
+
+/* ===== Scanner ===== */
+function setCam(on) { $('camOv').classList.toggle('hide', on); $('camBtn').textContent = on ? 'Stop camera' : 'Start camera'; }
+async function stopCam() { if (scanner && scanner.isScanning) { try { await scanner.stop(); } catch (e) {} } setCam(false); }
+$('camBtn').onclick = async () => {
+  if (scanner && scanner.isScanning) return stopCam();
+  scanner = scanner || new Html5Qrcode('reader');
+  try { await scanner.start({facingMode: 'environment'}, {fps: 15, qrbox: {width: 240, height: 240}}, onScan, () => {}); setCam(true); }
+  catch (e) { toast('Camera unavailable. Allow camera access and try again.', 'bad'); setCam(false); }
+};
+function onScan(text) {
+  let id = text; try { const p = JSON.parse(text); if (p && p.id) id = p.id; } catch (e) {}
+  id = String(id).trim().toUpperCase();
+  if (id === last.id && Date.now() - last.at < 3000) return;
+  last = {id, at: Date.now()}; checkIn(id);
+}
+$('manualForm').onsubmit = e => { e.preventDefault(); last = {id: '', at: 0}; checkIn($('manualIn').value.trim().toUpperCase()); $('manualIn').value = ''; };
+async function checkIn(id) {
+  try {
+    const r = await rpc('check_in_ticket', {p_pin: pin, p_ticket_id: id});
+    if (r.result === 'invalid') flash('bad', 'Invalid ticket', '', `No ticket matches ${id}.`);
+    else if (r.result === 'already') flash('warn', 'Already used', r.name, `${r.ticket_id} · ${r.admitted} of ${r.admits} already in${r.by ? ' · scanned by ' + r.by : ''}${r.at ? ' at ' + new Date(r.at).toLocaleTimeString() : ''}`);
+    else flash('ok', r.admits > 1 ? `Welcome · ${r.admitted} of ${r.admits} in` : 'Welcome', r.name, `${r.ticket_id} · ${r.tier}`);
+    $('lastScan').textContent = `Last: ${id} · ${r.result === 'ok' ? 'admitted' : r.result}`; refresh();
+  } catch (err) { toast(err.message, 'bad'); }
+}
+let ac; function beep(f, d) { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .15; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) {} }
+function flash(kind, title, name, sub) {
+  const f = $('flash'); f.className = 'flash ' + kind;
+  f.innerHTML = `<h3>${esc(title)}</h3>${name ? `<div class="nm">${esc(name)}</div>` : ''}<p>${esc(sub)}</p><p style="margin-top:16px;font-size:13px">Tap to scan the next ticket</p>`;
+  if (kind === 'ok') beep(880, .15); else { beep(320, .25); }
+  if (navigator.vibrate) navigator.vibrate(kind === 'ok' ? 80 : [120, 60, 120]);
+  clearTimeout(flash.t); flash.t = setTimeout(() => f.classList.add('hide'), 2600); f.onclick = () => f.classList.add('hide');
+}
+
+/* ===== Guests ===== */
+function stats() {
+  const inN = tickets.reduce((a, t) => a + t.admitted, 0), tot = tickets.reduce((a, t) => a + t.admits, 0);
+  $('sIssued').textContent = tickets.length; $('sIn').textContent = inN; $('sLeft').textContent = tot - inN; $('gCount').textContent = tickets.length;
+}
+function renderList() {
+  const q = $('search').value.toLowerCase().trim(), f = $('filter').value;
+  const rows = tickets.filter(t => (f === 'ALL' || t.status === f) && [t.name, t.phone, t.ticket_id, t.sold_by, t.checked_in_by].some(v => (v || '').toLowerCase().includes(q)));
+  $('list').innerHTML = rows.map(t => {
+    const st = t.status === 'CHECKED_IN' ? '<span class="st in">In</span>' : t.status === 'PARTIAL' ? `<span class="st part">${t.admitted} of ${t.admits} in</span>` : '<span class="st">Not in</span>';
+    return `<div class="item"><div><div class="n">${esc(t.name)}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">Sold by ${esc(t.sold_by)}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
+      <div>${st}<div class="mini"><button data-a="view" data-id="${esc(t.ticket_id)}">View</button><button class="admin-only" data-a="del" data-id="${esc(t.ticket_id)}">Delete</button></div></div></div>`;
+  }).join('') || '<div class="empty">No tickets match. Issue one from the Issue tab.</div>';
+}
+$('list').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return; const t = tickets.find(x => x.ticket_id === b.dataset.id); if (!t) return;
+  if (b.dataset.a === 'view') { current = t; tab('issue'); showTicket(t); }
+  if (b.dataset.a === 'del' && confirm(`Delete ticket ${t.ticket_id} (${t.name})?`)) { try { await rpc('delete_ticket', {p_pin: pin, p_ticket_id: t.ticket_id}); refresh(); } catch (err) { toast(err.message, 'bad'); } }
+};
+$('search').oninput = $('filter').onchange = renderList;
+$('csvBtn').onclick = () => {
+  const cell = v => { v = String(v ?? ''); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+  const head = ['Ticket ID', 'Name', 'Phone', 'Type', 'Price', 'Payment', 'Sold by', 'Status', 'Admitted', 'Admits', 'Scanned by', 'Scan time'];
+  const lines = tickets.map(t => [t.ticket_id, t.name, t.phone, t.tier, t.price, t.payment, t.sold_by, t.status, t.admitted, t.admits, t.checked_in_by, t.check_in_time ? new Date(t.check_in_time).toLocaleString() : ''].map(cell).join(','));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + [head.map(cell).join(','), ...lines].join('\n')], {type: 'text/csv'}));
+  a.download = `tickets_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+};
+$('resetBtn').onclick = async () => {
+  if (prompt('This deletes EVERY ticket. Type RESET to confirm.') !== 'RESET') return;
+  try { await rpc('reset_tickets', {p_pin: pin}); toast('All tickets deleted'); refresh(); } catch (err) { toast(err.message, 'bad'); }
+};
+async function refresh() { try { tickets = await rpc('list_tickets', {p_pin: pin}); stats(); renderList(); } catch (e) {} }
+
+/* ===== Settings (admin) ===== */
+function tierRow(t = {name: '', price: 0, admits: 1}) {
+  const d = document.createElement('div'); d.className = 'tier';
+  d.innerHTML = `<input placeholder="Name" value="${esc(t.name)}" required><input type="number" min="0" step="any" placeholder="Price" value="${esc(t.price)}"><input type="number" min="1" placeholder="Admits" value="${esc(t.admits)}"><button type="button" aria-label="Remove">✕</button>`;
+  d.querySelector('button').onclick = () => { if ($('tierRows').children.length > 1) d.remove(); };
+  $('tierRows').appendChild(d);
+}
+$('gear').onclick = () => {
+  $('sTitle').value = cfg.title; $('sTag').value = cfg.tagline; $('sDate').value = cfg.date; $('sTime').value = cfg.time; $('sVenue').value = cfg.venue;
+  $('sDress').value = cfg.dressCode; $('sCur').value = cfg.currency; $('sPre').value = cfg.prefix; $('sAcc').value = cfg.accent; $('sFoot').value = cfg.footer;
+  $('tierRows').innerHTML = ''; cfg.tiers.forEach(tierRow); $('settings').classList.remove('hide');
+};
+$('addTier').onclick = () => tierRow();
+$('setCancel').onclick = () => $('settings').classList.add('hide');
+$('setForm').onsubmit = async e => {
+  e.preventDefault();
+  const tiers = [...$('tierRows').children].map(r => { const i = r.querySelectorAll('input'); return {name: i[0].value.trim(), price: Number(i[1].value) || 0, admits: Math.max(1, parseInt(i[2].value) || 1)}; });
+  const n = {title: $('sTitle').value.trim(), tagline: $('sTag').value.trim(), date: $('sDate').value.trim(), time: $('sTime').value.trim(), venue: $('sVenue').value.trim(),
+    dressCode: $('sDress').value.trim(), currency: $('sCur').value.trim(), prefix: $('sPre').value.trim().toUpperCase(), accent: $('sAcc').value, footer: $('sFoot').value.trim(), tiers};
+  try { cfg = {...DEF, ...(await rpc('save_settings', {p_pin: pin, p_config: n}))}; current = null; applyCfg(); $('settings').classList.add('hide'); toast('Event settings saved'); }
+  catch (err) { toast(err.message, 'bad'); }
+};
+
+/* ===== Tabs, login, boot ===== */
+function tab(n) {
+  ['issue', 'scan', 'guests'].forEach(t => $('tab-' + t).classList.toggle('hide', t !== n));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === n));
+  if (n !== 'scan') stopCam();
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => tab(b.dataset.tab));
+
+function enter() {
+  $('login').classList.add('hide'); $('who').textContent = user.name;
+  document.body.classList.toggle('is-admin', user.role === 'admin');
+  refresh(); clearInterval(timer); timer = setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+}
+$('loginForm').onsubmit = async e => {
+  e.preventDefault(); const p = $('pinIn').value.trim();
+  try { user = await rpc('verify_pin', {p_pin: p}); pin = p; localStorage.setItem('tm_pin', p); $('pinIn').value = ''; $('loginErr').textContent = ''; enter(); }
+  catch (err) { $('loginErr').textContent = 'That PIN isn\'t recognised. Check it and try again.'; }
+};
+$('logout').onclick = () => { localStorage.removeItem('tm_pin'); pin = user = null; clearInterval(timer); stopCam(); $('login').classList.remove('hide'); };
+
+(async () => {
+  try { const c = await rpc('get_settings'); if (c) cfg = {...DEF, ...c}; } catch (e) { toast('Could not load event settings. Run supabase_setup.sql first.', 'bad'); }
+  applyCfg();
+  if (pin) { try { user = await rpc('verify_pin', {p_pin: pin}); } catch (e) { pin = null; localStorage.removeItem('tm_pin'); } }
+  user ? enter() : $('login').classList.remove('hide');
+})();
+</script>
+</body>
+</html>
