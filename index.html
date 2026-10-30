@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0C10">
 <title>Ticket Manager</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('tm_theme')||'dark'}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -12,27 +13,28 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-:root{--bg:#0B0C10;--surf:#14151C;--surf2:#1B1D26;--line:#262833;--gold:#C9A96E;--txt:#F4F0E6;--mut:#9A978F;--ok:#3FB68B;--bad:#E5566D;--warn:#E3A857;
+:root{--bg:#0B0C10;--surf:#14151C;--surf2:#1B1D26;--line:#262833;--gold:#C9A96E;--gold-ink:var(--gold);--txt:#F4F0E6;--mut:#9A978F;--ok:#3FB68B;--bad:#E5566D;--warn:#E3A857;--glass:rgba(11,12,16,.92);--glass2:rgba(20,21,28,.96);
 --serif:'Cormorant Garamond',Georgia,serif;--sans:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+[data-theme=light]{--bg:#F5F2EA;--surf:#FFFFFF;--surf2:#EFEADD;--line:#DDD6C6;--txt:#1C1A16;--mut:#6B675C;--gold-ink:color-mix(in srgb,var(--gold) 60%,#000);--ok:#1E8A63;--bad:#C93A52;--warn:#A86F12;--glass:rgba(245,242,234,.92);--glass2:rgba(255,255,255,.96)}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--txt);font:15px/1.5 var(--sans);min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+body{background:var(--bg);color:var(--txt);font:15px/1.5 var(--sans);min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom));transition:background .2s,color .2s}
 .hide{display:none!important}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-header{position:sticky;top:0;z-index:20;background:rgba(11,12,16,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-header h1{font:700 22px/1.1 var(--serif);letter-spacing:.02em;color:var(--gold)}
+header{position:sticky;top:0;z-index:20;background:var(--glass);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font:700 22px/1.1 var(--serif);letter-spacing:.02em;color:var(--gold-ink)}
 header small{color:var(--mut);font-size:12px}
 .who{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
 .who b{color:var(--txt);font-weight:600}
-.ib{padding:8px 10px;border-radius:10px;color:var(--mut);border:1px solid var(--line)}
-.ib:hover{color:var(--gold)}
+.ib{padding:8px 10px;border-radius:10px;color:var(--mut);border:1px solid var(--line);line-height:1.2}
+.ib:hover{color:var(--gold-ink)}
 main{max-width:980px;margin:0 auto;padding:16px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .stat{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .stat span{font-size:12px;color:var(--mut)}
 .stat b{display:block;font:700 30px/1.1 var(--serif);font-variant-numeric:tabular-nums}
-.stat.k b{color:var(--gold)}
+.stat.k b{color:var(--gold-ink)}
 .grid{display:grid;gap:18px}
 @media(min-width:820px){.grid{grid-template-columns:5fr 6fr;align-items:start}}
 .panel{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:20px}
@@ -44,19 +46,17 @@ input:focus,select:focus{border-color:var(--gold);outline:0}
 .btn{width:100%;margin-top:18px;padding:14px;border-radius:12px;background:var(--gold);color:#17130A;font-weight:700;transition:transform .1s}
 .btn:active{transform:scale(.98)}
 .btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line);margin-top:0;width:auto;padding:10px 14px;font-size:14px;font-weight:600}
-.btn:disabled{opacity:.5}
+.btn:disabled{opacity:.45}
 .acts{display:flex;gap:8px;margin-bottom:12px;justify-content:flex-end}
-/* ticket */
-.ticket{--tc:#C7CAD2;position:relative;max-width:400px;margin:0 auto;padding:26px 24px 20px;border-radius:20px;border:1.5px solid var(--tc);
-background:radial-gradient(120% 80% at 50% 0,color-mix(in srgb,var(--tc) 14%,#14151C),#0E0F14 70%)}
-.ticket.t1{--tc:var(--gold)}.ticket.t2{--tc:#E0B3A0}
+/* ticket: always dark, in both themes, and free of colour functions html2canvas can't parse */
+.ticket{--txt:#F4F0E6;--mut:#9A978F;--tc:#C7CAD2;--tcs:rgba(199,202,210,.14);--tcl:rgba(199,202,210,.45);
+position:relative;max-width:400px;margin:0 auto;padding:26px 24px 20px;border-radius:20px;border:1.5px solid var(--tc);color:var(--txt);
+background-color:#0E0F14;background-image:linear-gradient(165deg,var(--tcs),rgba(14,15,20,0) 60%)}
 .tk-top{text-align:center}
 .tk-tag{font-size:12px;color:var(--tc);letter-spacing:.14em;text-transform:uppercase}
 .ticket h2{font:700 34px/1.1 var(--serif);margin:6px 0 8px;color:var(--txt)}
 .tk-meta{font-size:13px;color:var(--mut)}
-.perf{position:relative;border-top:2px dashed color-mix(in srgb,var(--tc) 45%,transparent);margin:20px -24px}
-.perf::before,.perf::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:50%;background:var(--bg);border:1.5px solid var(--tc)}
-.perf::before{left:-12px;clip-path:inset(0 0 0 50%)}.perf::after{right:-12px;clip-path:inset(0 50% 0 0)}
+.perf{border-top:2px dashed var(--tcl);margin:20px 0}
 .tk-body{display:flex;gap:18px;align-items:center}
 .qrbox{background:#fff;padding:9px;border-radius:12px;flex:none;line-height:0}
 .tk-info{min-width:0;flex:1}
@@ -72,25 +72,25 @@ background:radial-gradient(120% 80% at 50% 0,color-mix(in srgb,var(--tc) 14%,#14
 #reader{width:100%;height:100%}#reader video{object-fit:cover!important}
 .camov{position:absolute;inset:0;background:var(--surf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--mut);text-align:center;padding:20px}
 .last{max-width:420px;margin:12px auto 0;font-size:14px;color:var(--mut);text-align:center;min-height:21px}
-.flash{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:8px}
+.flash{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:8px;color:#fff}
 .flash.ok{background:#0F5A44}.flash.warn{background:#7A5314}.flash.bad{background:#7D2233}
 .flash h3{font:700 34px var(--serif);letter-spacing:.02em}.flash .nm{font:700 46px/1.1 var(--serif);overflow-wrap:anywhere}.flash p{opacity:.85}
 /* guests */
 .tools{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.tools input{flex:1;min-width:160px}.tools select{width:auto}
 .item{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:14px 4px;border-bottom:1px solid var(--line)}
 .item:last-child{border:0}.item .n{font-weight:600;overflow-wrap:anywhere}.item .m{font-size:13px;color:var(--mut)}
-.item .id{font:500 13px var(--mono);color:var(--gold)}
+.item .id{font:500 13px var(--mono);color:var(--gold-ink)}
 .st{font-size:12px;font-weight:600;padding:2px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut);align-self:start;white-space:nowrap}
-.st.in{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}.st.part{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
-.mini{display:flex;gap:6px;justify-content:flex-end}.mini button{font-size:13px;color:var(--mut);padding:2px 6px}.mini button:hover{color:var(--gold)}
+.st.in{color:var(--ok);border-color:var(--ok)}.st.part{color:var(--warn);border-color:var(--warn)}
+.mini{display:flex;gap:6px;justify-content:flex-end}.mini button{font-size:13px;color:var(--mut);padding:2px 6px}.mini button:hover{color:var(--gold-ink)}
 .empty{padding:34px 10px;text-align:center;color:var(--mut)}
 .admin-only{display:none!important}.is-admin .admin-only{display:inline-flex!important}.is-admin div.admin-only{display:block!important}
 /* tabs */
-nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(20,21,28,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--glass2);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 nav button{flex:1;padding:10px 4px;color:var(--mut);font-size:13px;font-weight:600;border-radius:12px}
-nav button.on{color:var(--gold);background:var(--surf2)}
+nav button.on{color:var(--gold-ink);background:var(--surf2)}
 /* modal / toast */
-.ov{position:fixed;inset:0;z-index:50;background:rgba(5,6,8,.9);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.ov{position:fixed;inset:0;z-index:50;background:rgba(5,6,8,.88);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
 .modal{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:22px;width:100%;max-width:460px;margin:auto}
 .pin{text-align:center;letter-spacing:.5em;font:700 26px var(--mono)}
 .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;text-align:center}
@@ -98,7 +98,7 @@ nav button.on{color:var(--gold);background:var(--surf2)}
 .tier button{color:var(--bad)}
 .hint{font-size:12px;color:var(--mut);margin-top:6px}
 #toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;width:calc(100% - 32px);max-width:380px}
-.t{padding:12px 16px;border-radius:12px;background:var(--surf2);border:1px solid var(--line);font-size:14px;text-align:center}.t.bad{border-color:var(--bad)}.t.ok{border-color:var(--ok)}
+.t{padding:12px 16px;border-radius:12px;background:var(--surf2);border:1px solid var(--line);font-size:14px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.2)}.t.bad{border-color:var(--bad)}.t.ok{border-color:var(--ok)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -111,12 +111,14 @@ nav button.on{color:var(--gold);background:var(--surf2)}
     <input id="pinIn" class="pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••" required>
     <button class="btn" type="submit">Unlock</button>
     <div class="err" id="loginErr"></div>
+    <button type="button" class="ib" id="themeBtn2" style="margin-top:10px">Switch light / dark</button>
   </form>
 </div>
 
 <header>
   <div style="min-width:0"><h1 id="hTitle">Ticket Manager</h1><small id="hVenue"></small></div>
   <div class="who"><b id="who">-</b>
+    <button class="ib" id="themeBtn" aria-label="Switch to light mode" title="Light / dark">☀</button>
     <button class="ib admin-only" id="gear" aria-label="Event settings">⚙</button>
     <button class="ib" id="logout" aria-label="Sign out">Sign out</button></div>
 </header>
@@ -210,19 +212,30 @@ nav button.on{color:var(--gold);background:var(--surf2)}
 
 <script>
 /* ===== Connection (only thing to edit in code) ===== */
-const SB_URL = 'https://wciubytdgfgdsfbskcmu.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjaXVieXRkZ2ZnZHNmYnNrY211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyOTA5MjAsImV4cCI6MjEwODg2NjkyMH0._26QbBzbZrGXB_rPe1mc06ye4aq4SWTvoCaJBW-W-PE';
+const SB_URL = 'https://ylascpwfqbfylwdgqvcb.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsYXNjcHdmcWJmeWx3ZGdxdmNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjY3MjMsImV4cCI6MjA5MjIwMjcyM30.uHT-IymBrvMiCtyC1ZkBJFmGDuyb-7EkxmTTqt2RYfM';
 /* Everything about the event itself lives in Supabase and is edited with the gear icon. */
 
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DEF = {title:'Ticket Manager',tagline:'',date:'',time:'',venue:'',prefix:'TKT-',currency:'R',dressCode:'',footer:'Present this QR code at the entrance.',accent:'#C9A96E',tiers:[{name:'Single',price:0,admits:1}]};
-let cfg = DEF, pin = localStorage.getItem('tm_pin'), user = null, tickets = [], current = null, scanner = null, last = {id:'',at:0}, timer = null;
+let cfg = DEF, pin = localStorage.getItem('tm_pin'), user = null, tickets = [], current = null, scanner = null, last = {id:'',at:0}, timer = null, blobP = null;
 
 async function rpc(fn, args = {}) { const {data, error} = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; }
 function toast(msg, type = 'ok') { const e = document.createElement('div'); e.className = 't ' + type; e.textContent = msg; $('toast').appendChild(e); setTimeout(() => e.remove(), 3200); }
 const money = n => (cfg.currency || '') + Number(n || 0).toLocaleString();
+
+/* ===== Light / dark ===== */
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('tm_theme', t); } catch (e) {}
+  $('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+  $('themeBtn').setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#0B0C10' : '#F5F2EA';
+}
+const flip = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+$('themeBtn').onclick = $('themeBtn2').onclick = flip;
 
 /* ===== Config -> UI ===== */
 function applyCfg() {
@@ -240,9 +253,12 @@ function syncPrice() { const t = cfg.tiers[$('fTier').value] || {}; $('fPrice').
 $('fTier').onchange = syncPrice;
 
 /* ===== Ticket ===== */
+const rgba = (hex, a) => { const h = String(hex).replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
 function showTicket(t) {
   const idx = Math.max(0, cfg.tiers.findIndex(x => x.name === t.tier));
-  const el = $('ticket'); el.className = 'ticket t' + Math.min(idx, 2);
+  const col = ['#C7CAD2', cfg.accent || '#C9A96E', '#E0B3A0'][Math.min(idx, 2)];
+  const el = $('ticket');
+  el.style.setProperty('--tc', col); el.style.setProperty('--tcs', rgba(col, .16)); el.style.setProperty('--tcl', rgba(col, .5));
   el.innerHTML = `<div class="tk-top"><div class="tk-tag">${esc(cfg.tagline)}</div><h2>${esc(cfg.title)}</h2>
     <div class="tk-meta">${esc(cfg.date)}${cfg.time ? ' · ' + esc(cfg.time) : ''}</div><div class="tk-meta">${esc(cfg.venue)}</div></div>
     <div class="perf"></div>
@@ -254,19 +270,37 @@ function showTicket(t) {
   new QRCode($('qr'), {text: t.ticket_id, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M});
   const real = !t.ticket_id.endsWith('XXXXXX');
   $('dlBtn').disabled = $('shBtn').disabled = !real;
+  blobP = null; if (real) prerender();
 }
-async function ticketBlob() {
-  const c = await html2canvas($('ticket'), {scale: 3, backgroundColor: '#0B0C10'});
-  return new Promise(r => c.toBlob(r, 'image/png'));
+/* The PNG is built as soon as a ticket is shown, so Share can fire straight from the tap
+   (phones block sharing if there's a long wait between the tap and the share call). */
+function prerender() {
+  blobP = (async () => {
+    await (document.fonts && document.fonts.ready);
+    await new Promise(r => setTimeout(r, 200));
+    const c = await html2canvas($('ticket'), {scale: 3, backgroundColor: null, useCORS: true, logging: false});
+    return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Image failed')), 'image/png'));
+  })();
+  blobP.catch(() => {});
 }
+const fileName = () => `Ticket_${current.ticket_id}_${current.name.replace(/[^\w]+/g, '_')}.png`;
 $('dlBtn').onclick = async () => {
-  const b = await ticketBlob(), a = document.createElement('a');
-  a.href = URL.createObjectURL(b); a.download = `Ticket_${current.ticket_id}_${current.name.replace(/\s+/g, '_')}.png`; a.click(); URL.revokeObjectURL(a.href);
+  if (!current) return;
+  try {
+    if (!blobP) prerender();
+    const b = await blobP, a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = fileName(); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) { blobP = null; toast('Could not create the ticket image. Please try again.', 'bad'); }
 };
 $('shBtn').onclick = async () => {
-  const b = await ticketBlob(), f = new File([b], `Ticket_${current.ticket_id}.png`, {type: 'image/png'});
-  if (navigator.canShare && navigator.canShare({files: [f]})) { try { await navigator.share({files: [f], title: cfg.title, text: `Ticket for ${current.name}`}); } catch (e) {} }
-  else { $('dlBtn').click(); toast('Sharing isn\'t supported here, so the ticket was downloaded.'); }
+  if (!current) return;
+  try {
+    if (!blobP) prerender();
+    const b = await blobP, f = new File([b], fileName(), {type: 'image/png'});
+    if (navigator.canShare && navigator.canShare({files: [f]})) await navigator.share({files: [f], title: cfg.title, text: `Ticket for ${current.name}`});
+    else { $('dlBtn').click(); toast('Sharing isn\'t supported on this browser, so the ticket was downloaded.'); }
+  } catch (e) { if (e && e.name === 'AbortError') return; blobP = null; toast('Could not share the ticket. Try Download instead.', 'bad'); }
 };
 
 /* ===== Issue ===== */
@@ -276,7 +310,7 @@ $('issueForm').onsubmit = async e => {
   try {
     const t = await rpc('issue_ticket', {p_pin: pin, p_name: $('fName').value, p_phone: $('fPhone').value, p_tier: tier.name,
       p_admits: tier.admits, p_price: Number($('fPrice').value) || 0, p_payment: $('fPay').value});
-    current = t; showTicket(t); $('dlBtn').disabled = $('shBtn').disabled = false;
+    current = t; showTicket(t);
     $('fName').value = ''; $('fPhone').value = ''; toast('Ticket ' + t.ticket_id + ' issued'); refresh();
   } catch (err) { toast(err.message, 'bad'); }
   btn.disabled = false;
@@ -393,7 +427,8 @@ $('loginForm').onsubmit = async e => {
 $('logout').onclick = () => { localStorage.removeItem('tm_pin'); pin = user = null; clearInterval(timer); stopCam(); $('login').classList.remove('hide'); };
 
 (async () => {
-  try { const c = await rpc('get_settings'); if (c) cfg = {...DEF, ...c}; } catch (e) { toast('Could not load event settings. Run supabase_setup.sql first.', 'bad'); }
+  setTheme(document.documentElement.dataset.theme || 'dark');
+  try { const c = await rpc('get_settings'); if (c) cfg = {...DEF, ...c}; } catch (e) { toast('Could not load event settings. Run the SQL setup first.', 'bad'); }
   applyCfg();
   if (pin) { try { user = await rpc('verify_pin', {p_pin: pin}); } catch (e) { pin = null; localStorage.removeItem('tm_pin'); } }
   user ? enter() : $('login').classList.remove('hide');
