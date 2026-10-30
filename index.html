@@ -85,6 +85,15 @@ background-color:#0E0F14;background-image:linear-gradient(165deg,var(--tcs),rgba
 .mini{display:flex;gap:6px;justify-content:flex-end}.mini button{font-size:13px;color:var(--mut);padding:2px 6px}.mini button:hover{color:var(--gold-ink)}
 .empty{padding:34px 10px;text-align:center;color:var(--mut)}
 .admin-only{display:none!important}.is-admin .admin-only{display:inline-flex!important}.is-admin div.admin-only{display:block!important}
+/* analysis */
+.sale{margin-bottom:14px}.sale h3{font:700 22px/1.2 var(--serif)}
+.sh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.big{font:700 30px/1.1 var(--serif);color:var(--gold-ink);font-variant-numeric:tabular-nums}
+.sl{margin:16px 0 4px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.srow{display:grid;grid-template-columns:1fr 46px 96px;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.srow span:nth-child(n+2){text-align:right;font-variant-numeric:tabular-nums}
+.srow.hd{font-size:11px;color:var(--mut);border:0;padding-bottom:0}
+.amt{font-weight:700;color:var(--txt)}
 /* tabs */
 nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--glass2);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 nav button{flex:1;padding:10px 4px;color:var(--mut);font-size:13px;font-weight:600;border-radius:12px}
@@ -182,12 +191,14 @@ nav button.on{color:var(--gold-ink);background:var(--surf2)}
       <div id="list"></div>
     </div>
   </section>
+<section id="tab-analysis" class="hide"><div id="salesBox"></div></section>
 </main>
 
 <nav>
   <button data-tab="issue" class="on">Issue</button>
   <button data-tab="scan">Scan</button>
   <button data-tab="guests">Guests <span id="gCount">0</span></button>
+  <button data-tab="analysis">Analysis</button>
 </nav>
 
 <div id="flash" class="flash hide"></div>
@@ -360,7 +371,7 @@ function renderList() {
   const rows = tickets.filter(t => (f === 'ALL' || t.status === f) && [t.name, t.phone, t.ticket_id, t.sold_by, t.checked_in_by].some(v => (v || '').toLowerCase().includes(q)));
   $('list').innerHTML = rows.map(t => {
     const st = t.status === 'CHECKED_IN' ? '<span class="st in">In</span>' : t.status === 'PARTIAL' ? `<span class="st part">${t.admitted} of ${t.admits} in</span>` : '<span class="st">Not in</span>';
-    return `<div class="item"><div><div class="n">${esc(t.name)}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">Sold by ${esc(t.sold_by)}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
+    return `<div class="item"><div><div class="n">${esc(t.name)}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">${t.price != null ? `<span class="amt">${esc(money(t.price))}</span> · ${esc(t.payment || '-')}` : ''}${t.sold_by ? (t.price != null ? ' · ' : '') + 'Sold by ' + esc(t.sold_by) : ''}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
       <div>${st}<div class="mini"><button data-a="view" data-id="${esc(t.ticket_id)}">View</button><button class="admin-only" data-a="del" data-id="${esc(t.ticket_id)}">Delete</button></div></div></div>`;
   }).join('') || '<div class="empty">No tickets match. Issue one from the Issue tab.</div>';
 }
@@ -381,7 +392,26 @@ $('resetBtn').onclick = async () => {
   if (prompt('This deletes EVERY ticket. Type RESET to confirm.') !== 'RESET') return;
   try { await rpc('reset_tickets', {p_pin: pin}); toast('All tickets deleted'); refresh(); } catch (err) { toast(err.message, 'bad'); }
 };
-async function refresh() { try { tickets = await rpc('list_tickets', {p_pin: pin}); stats(); renderList(); } catch (e) {} }
+async function refresh() { try { tickets = await rpc('list_tickets', {p_pin: pin}); stats(); renderList(); if (curTab === 'analysis') loadSales(); } catch (e) {} }
+
+/* ===== Analysis ===== */
+function salesBlock(title, o) {
+  const rows = (arr, k) => (arr || []).map(r => `<div class="srow"><span>${esc(r[k])}</span><span>${r.count}</span><span>${esc(money(r.amount))}</span></div>`).join('') || '<div class="srow"><span style="color:var(--mut)">No sales yet</span></div>';
+  const hd = '<div class="srow hd"><span></span><span>Qty</span><span>Amount</span></div>';
+  return `<div class="panel sale"><div class="sh"><h3>${esc(title)}</h3><div class="big">${esc(money(o.amount))}</div></div>
+    <div style="font-size:13px;color:var(--mut)">${o.count} ticket${o.count === 1 ? '' : 's'} sold</div>
+    <div class="sl">By ticket type</div>${hd}${rows(o.by_tier, 'tier')}
+    <div class="sl">By payment method</div>${hd}${rows(o.by_payment, 'payment')}</div>`;
+}
+async function loadSales() {
+  try {
+    const s = await rpc('sales_summary', {p_pin: pin});
+    const all = salesBlock('All sellers combined', {...s.total, by_tier: s.by_tier, by_payment: s.by_payment});
+    $('salesBox').innerHTML = s.role === 'admin'
+      ? all + '<div class="sl" style="margin:22px 0 8px">Each seller</div>' + (s.sellers || []).map(x => salesBlock(x.name, x)).join('')
+      : salesBlock('Your sales', s.mine) + all;
+  } catch (e) { $('salesBox').innerHTML = '<div class="empty">Could not load sales. Make sure the latest SQL setup has been run.</div>'; }
+}
 
 /* ===== Settings (admin) ===== */
 function tierRow(t = {name: '', price: 0, admits: 1}) {
@@ -407,8 +437,11 @@ $('setForm').onsubmit = async e => {
 };
 
 /* ===== Tabs, login, boot ===== */
+let curTab = 'issue';
 function tab(n) {
-  ['issue', 'scan', 'guests'].forEach(t => $('tab-' + t).classList.toggle('hide', t !== n));
+  curTab = n;
+  ['issue', 'scan', 'guests', 'analysis'].forEach(t => $('tab-' + t).classList.toggle('hide', t !== n));
+  if (n === 'analysis') loadSales();
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === n));
   if (n !== 'scan') stopCam();
 }
