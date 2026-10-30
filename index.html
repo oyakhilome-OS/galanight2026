@@ -49,7 +49,7 @@ input:focus,select:focus{border-color:var(--gold);outline:0}
 .btn:disabled{opacity:.45}
 .acts{display:flex;gap:8px;margin-bottom:12px;justify-content:flex-end}
 /* ticket: always dark, in both themes, and free of colour functions html2canvas can't parse */
-.ticket{--txt:#F4F0E6;--mut:#9A978F;--tc:#C7CAD2;--tcs:rgba(199,202,210,.14);--tcl:rgba(199,202,210,.45);
+.ticket{--txt:#F4F0E6;--mut:#9A978F;--tc:#8DAFC9;--tcs:rgba(141,175,201,.14);--tcl:rgba(141,175,201,.45);
 position:relative;max-width:400px;margin:0 auto;padding:26px 24px 20px;border-radius:20px;border:1.5px solid var(--tc);color:var(--txt);
 background-color:#0E0F14;background-image:linear-gradient(165deg,var(--tcs),rgba(14,15,20,0) 60%)}
 .tk-top{text-align:center}
@@ -62,11 +62,11 @@ background-color:#0E0F14;background-image:linear-gradient(165deg,var(--tcs),rgba
 .tk-info{min-width:0;flex:1}
 .tk-info label{margin:0 0 2px;font-size:11px}
 .tk-name{font:700 24px/1.15 var(--serif);margin-bottom:12px;overflow-wrap:anywhere}
-.tk-admit{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px}
+.tk-admit{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:14px;margin-bottom:10px}
 .badge{padding:2px 10px;border-radius:99px;border:1px solid var(--tc);color:var(--tc);font-size:13px;font-weight:600}
 .tk-id{margin:16px 0 8px;text-align:center;font:700 17px var(--mono);letter-spacing:.14em;color:var(--tc)}
 .tk-foot{text-align:center;font-size:11px;color:var(--mut)}
-@media(max-width:380px){.tk-body{flex-direction:column;text-align:center}.tk-admit{justify-content:center}}
+@media(max-width:380px){.tk-body{flex-direction:column;text-align:center}.tk-admit{align-items:center}}
 /* scanner */
 .view{position:relative;max-width:420px;margin:0 auto;aspect-ratio:1;background:#000;border-radius:18px;overflow:hidden;border:1px solid var(--line)}
 #reader{width:100%;height:100%}#reader video{object-fit:cover!important}
@@ -141,7 +141,7 @@ nav button.on{color:var(--gold-ink);background:var(--surf2)}
           <div><label for="fPrice">Price paid</label><input id="fPrice" type="number" min="0" step="any" inputmode="decimal"></div>
         </div>
         <label for="fPay">Payment</label>
-        <select id="fPay"><option>Cash</option><option>EFT</option><option>Card</option><option>Complimentary</option></select>
+        <select id="fPay"><option>Cash</option><option>EFT</option><option>E-wallet</option></select>
         <button class="btn" id="issueBtn" type="submit">Issue ticket</button>
       </form>
     </div>
@@ -256,7 +256,7 @@ $('fTier').onchange = syncPrice;
 const rgba = (hex, a) => { const h = String(hex).replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
 function showTicket(t) {
   const idx = Math.max(0, cfg.tiers.findIndex(x => x.name === t.tier));
-  const col = ['#C7CAD2', cfg.accent || '#C9A96E', '#E0B3A0'][Math.min(idx, 2)];
+  const col = ['#8DAFC9', cfg.accent || '#C9A96E', '#E0B3A0'][Math.min(idx, 2)];
   const el = $('ticket');
   el.style.setProperty('--tc', col); el.style.setProperty('--tcs', rgba(col, .16)); el.style.setProperty('--tcl', rgba(col, .5));
   el.innerHTML = `<div class="tk-top"><div class="tk-tag">${esc(cfg.tagline)}</div><h2>${esc(cfg.title)}</h2>
