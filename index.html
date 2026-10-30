@@ -94,6 +94,7 @@ background-color:#0E0F14;background-image:linear-gradient(165deg,var(--tcs),rgba
 .srow span:nth-child(n+2){text-align:right;font-variant-numeric:tabular-nums}
 .srow.hd{font-size:11px;color:var(--mut);border:0;padding-bottom:0}
 .amt{font-weight:700;color:var(--txt)}
+.tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:var(--gold);color:#17130A;align-items:center;white-space:nowrap}
 /* tabs */
 nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--glass2);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 nav button{flex:1;padding:10px 4px;color:var(--mut);font-size:13px;font-weight:600;border-radius:12px}
@@ -126,7 +127,7 @@ nav button.on{color:var(--gold-ink);background:var(--surf2)}
 
 <header>
   <div style="min-width:0"><h1 id="hTitle">Ticket Manager</h1><small id="hVenue"></small></div>
-  <div class="who"><b id="who">-</b>
+  <div class="who"><b id="who">-</b><span class="tag admin-only">Admin</span>
     <button class="ib" id="themeBtn" aria-label="Switch to light mode" title="Light / dark">☀</button>
     <button class="ib admin-only" id="gear" aria-label="Event settings">⚙</button>
     <button class="ib" id="logout" aria-label="Sign out">Sign out</button></div>
@@ -143,7 +144,7 @@ nav button.on{color:var(--gold-ink);background:var(--surf2)}
     <div class="panel">
       <h2>Issue a ticket</h2>
       <form id="issueForm">
-        <label for="fName">Guest name</label><input id="fName" required maxlength="80" autocomplete="off">
+        <label for="fName">Guest name</label><input id="fName" required maxlength="80" autocomplete="off" autocapitalize="words">
         <label for="fPhone">Phone number</label><input id="fPhone" type="tel" required maxlength="30" placeholder="073 123 4567">
         <div class="row2">
           <div><label for="fTier">Ticket type</label><select id="fTier"></select></div>
@@ -191,7 +192,7 @@ nav button.on{color:var(--gold-ink);background:var(--surf2)}
       <div id="list"></div>
     </div>
   </section>
-<section id="tab-analysis" class="hide"><div id="salesBox"></div></section>
+<section id="tab-analysis" class="hide"><div class="tools"><input id="aSearch" type="search" placeholder="Search seller, ticket type or payment method"></div><div id="salesBox"></div></section>
 </main>
 
 <nav>
@@ -235,6 +236,7 @@ let cfg = DEF, pin = localStorage.getItem('tm_pin'), user = null, tickets = [], 
 
 async function rpc(fn, args = {}) { const {data, error} = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; }
 function toast(msg, type = 'ok') { const e = document.createElement('div'); e.className = 't ' + type; e.textContent = msg; $('toast').appendChild(e); setTimeout(() => e.remove(), 3200); }
+const nm = s => String(s ?? '').trim().replace(/\s+/g, ' ').replace(/(^|[\s\-'’])(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
 const money = n => (cfg.currency || '') + Number(n || 0).toLocaleString();
 
 /* ===== Light / dark ===== */
@@ -262,6 +264,7 @@ function applyCfg() {
 const sample = () => ({ticket_id: cfg.prefix + 'XXXXXX', name: 'Guest name', tier: cfg.tiers[0]?.name || '', admits: cfg.tiers[0]?.admits || 1});
 function syncPrice() { const t = cfg.tiers[$('fTier').value] || {}; $('fPrice').value = t.price || 0; }
 $('fTier').onchange = syncPrice;
+$('fName').addEventListener('blur', () => { $('fName').value = nm($('fName').value); });
 
 /* ===== Ticket ===== */
 const rgba = (hex, a) => { const h = String(hex).replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
@@ -274,7 +277,7 @@ function showTicket(t) {
     <div class="tk-meta">${esc(cfg.date)}${cfg.time ? ' · ' + esc(cfg.time) : ''}</div><div class="tk-meta">${esc(cfg.venue)}</div></div>
     <div class="perf"></div>
     <div class="tk-body"><div class="qrbox"><div id="qr"></div></div><div class="tk-info">
-      <label>Guest</label><div class="tk-name">${esc(t.name)}</div>
+      <label>Guest</label><div class="tk-name">${esc(nm(t.name))}</div>
       <div class="tk-admit"><span class="badge">${esc(t.tier)}</span>${t.admits > 1 ? 'Admits ' + t.admits : 'Admits one'}</div>
       ${cfg.dressCode ? `<label>Dress code</label><div style="font-size:14px">${esc(cfg.dressCode)}</div>` : ''}</div></div>
     <div class="tk-id">${esc(t.ticket_id)}</div><div class="tk-foot">${esc(cfg.footer)}</div>`;
@@ -319,7 +322,7 @@ $('issueForm').onsubmit = async e => {
   e.preventDefault(); const btn = $('issueBtn'); btn.disabled = true;
   const tier = cfg.tiers[$('fTier').value];
   try {
-    const t = await rpc('issue_ticket', {p_pin: pin, p_name: $('fName').value, p_phone: $('fPhone').value, p_tier: tier.name,
+    const t = await rpc('issue_ticket', {p_pin: pin, p_name: nm($('fName').value), p_phone: $('fPhone').value, p_tier: tier.name,
       p_admits: tier.admits, p_price: Number($('fPrice').value) || 0, p_payment: $('fPay').value});
     current = t; showTicket(t);
     $('fName').value = ''; $('fPhone').value = ''; toast('Ticket ' + t.ticket_id + ' issued'); refresh();
@@ -347,8 +350,8 @@ async function checkIn(id) {
   try {
     const r = await rpc('check_in_ticket', {p_pin: pin, p_ticket_id: id});
     if (r.result === 'invalid') flash('bad', 'Invalid ticket', '', `No ticket matches ${id}.`);
-    else if (r.result === 'already') flash('warn', 'Already used', r.name, `${r.ticket_id} · ${r.admitted} of ${r.admits} already in${r.by ? ' · scanned by ' + r.by : ''}${r.at ? ' at ' + new Date(r.at).toLocaleTimeString() : ''}`);
-    else flash('ok', r.admits > 1 ? `Welcome · ${r.admitted} of ${r.admits} in` : 'Welcome', r.name, `${r.ticket_id} · ${r.tier}`);
+    else if (r.result === 'already') flash('warn', 'Already used', nm(r.name), `${r.ticket_id} · ${r.admitted} of ${r.admits} already in${r.by ? ' · scanned by ' + r.by : ''}${r.at ? ' at ' + new Date(r.at).toLocaleTimeString() : ''}`);
+    else flash('ok', r.admits > 1 ? `Welcome · ${r.admitted} of ${r.admits} in` : 'Welcome', nm(r.name), `${r.ticket_id} · ${r.tier}`);
     $('lastScan').textContent = `Last: ${id} · ${r.result === 'ok' ? 'admitted' : r.result}`; refresh();
   } catch (err) { toast(err.message, 'bad'); }
 }
@@ -371,7 +374,7 @@ function renderList() {
   const rows = tickets.filter(t => (f === 'ALL' || t.status === f) && [t.name, t.phone, t.ticket_id, t.sold_by, t.checked_in_by].some(v => (v || '').toLowerCase().includes(q)));
   $('list').innerHTML = rows.map(t => {
     const st = t.status === 'CHECKED_IN' ? '<span class="st in">In</span>' : t.status === 'PARTIAL' ? `<span class="st part">${t.admitted} of ${t.admits} in</span>` : '<span class="st">Not in</span>';
-    return `<div class="item"><div><div class="n">${esc(t.name)}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">${t.price != null ? `<span class="amt">${esc(money(t.price))}</span> · ${esc(t.payment || '-')}` : ''}${t.sold_by ? (t.price != null ? ' · ' : '') + 'Sold by ' + esc(t.sold_by) : ''}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
+    return `<div class="item"><div><div class="n">${esc(nm(t.name))}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">${t.price != null ? `<span class="amt">${esc(money(t.price))}</span> · ${esc(t.payment || '-')}` : ''}${t.sold_by ? (t.price != null ? ' · ' : '') + 'Sold by ' + esc(t.sold_by) + (t.sold_by_role === 'admin' ? ' <span class="tag">Admin</span>' : '') : ''}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
       <div>${st}<div class="mini"><button data-a="view" data-id="${esc(t.ticket_id)}">View</button><button class="admin-only" data-a="del" data-id="${esc(t.ticket_id)}">Delete</button></div></div></div>`;
   }).join('') || '<div class="empty">No tickets match. Issue one from the Issue tab.</div>';
 }
@@ -395,22 +398,34 @@ $('resetBtn').onclick = async () => {
 async function refresh() { try { tickets = await rpc('list_tickets', {p_pin: pin}); stats(); renderList(); if (curTab === 'analysis') loadSales(); } catch (e) {} }
 
 /* ===== Analysis ===== */
-function salesBlock(title, o) {
-  const rows = (arr, k) => (arr || []).map(r => `<div class="srow"><span>${esc(r[k])}</span><span>${r.count}</span><span>${esc(money(r.amount))}</span></div>`).join('') || '<div class="srow"><span style="color:var(--mut)">No sales yet</span></div>';
+let lastSales = null;
+function salesBlock(title, o, q) {
+  const hit = !q || title.toLowerCase().includes(q);
+  const pick = (arr, k) => (arr || []).filter(r => hit || String(r[k]).toLowerCase().includes(q));
+  const tiers = pick(o.by_tier, 'tier'), pays = pick(o.by_payment, 'payment');
+  if (q && !hit && !tiers.length && !pays.length) return '';
+  const rows = (arr, k) => arr.map(r => `<div class="srow"><span>${esc(r[k])}</span><span>${r.count}</span><span>${esc(money(r.amount))}</span></div>`).join('') || `<div class="srow"><span style="color:var(--mut)">${q ? 'No match' : 'No sales yet'}</span></div>`;
   const hd = '<div class="srow hd"><span></span><span>Qty</span><span>Amount</span></div>';
-  return `<div class="panel sale"><div class="sh"><h3>${esc(title)}</h3><div class="big">${esc(money(o.amount))}</div></div>
+  return `<div class="panel sale"><div class="sh"><h3>${esc(title)}${o.role === 'admin' ? ' <span class="tag">Admin</span>' : ''}</h3><div class="big">${esc(money(o.amount))}</div></div>
     <div style="font-size:13px;color:var(--mut)">${o.count} ticket${o.count === 1 ? '' : 's'} sold</div>
-    <div class="sl">By ticket type</div>${hd}${rows(o.by_tier, 'tier')}
-    <div class="sl">By payment method</div>${hd}${rows(o.by_payment, 'payment')}</div>`;
+    <div class="sl">By ticket type</div>${hd}${rows(tiers, 'tier')}
+    <div class="sl">By payment method</div>${hd}${rows(pays, 'payment')}</div>`;
 }
+function renderSales() {
+  const s = lastSales; if (!s) return;
+  const q = $('aSearch').value.toLowerCase().trim();
+  const all = salesBlock('All sellers combined', {...s.total, by_tier: s.by_tier, by_payment: s.by_payment}, q);
+  let h;
+  if (s.role === 'admin') {
+    const each = (s.sellers || []).map(x => salesBlock(x.name, x, q)).join('');
+    h = all + (each ? '<div class="sl" style="margin:22px 0 8px">Each seller</div>' + each : '');
+  } else h = salesBlock('Your sales', s.mine, q) + all;
+  $('salesBox').innerHTML = h || '<div class="empty">Nothing matches your search.</div>';
+}
+$('aSearch').oninput = renderSales;
 async function loadSales() {
-  try {
-    const s = await rpc('sales_summary', {p_pin: pin});
-    const all = salesBlock('All sellers combined', {...s.total, by_tier: s.by_tier, by_payment: s.by_payment});
-    $('salesBox').innerHTML = s.role === 'admin'
-      ? all + '<div class="sl" style="margin:22px 0 8px">Each seller</div>' + (s.sellers || []).map(x => salesBlock(x.name, x)).join('')
-      : salesBlock('Your sales', s.mine) + all;
-  } catch (e) { $('salesBox').innerHTML = '<div class="empty">Could not load sales. Make sure the latest SQL setup has been run.</div>'; }
+  try { lastSales = await rpc('sales_summary', {p_pin: pin}); renderSales(); }
+  catch (e) { $('salesBox').innerHTML = '<div class="empty">Could not load sales. Make sure the latest SQL setup has been run.</div>'; }
 }
 
 /* ===== Settings (admin) ===== */
