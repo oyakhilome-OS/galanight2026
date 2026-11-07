@@ -237,6 +237,7 @@ let cfg = DEF, pin = localStorage.getItem('tm_pin'), user = null, tickets = [], 
 async function rpc(fn, args = {}) { const {data, error} = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; }
 function toast(msg, type = 'ok') { const e = document.createElement('div'); e.className = 't ' + type; e.textContent = msg; $('toast').appendChild(e); setTimeout(() => e.remove(), 3200); }
 const nm = s => String(s ?? '').trim().replace(/\s+/g, ' ').replace(/(^|[\s\-'’])(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
+const when = d => d ? new Date(d).toLocaleString([], {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : '';
 const money = n => (cfg.currency || '') + Number(n || 0).toLocaleString();
 
 /* ===== Light / dark ===== */
@@ -374,7 +375,7 @@ function renderList() {
   const rows = tickets.filter(t => (f === 'ALL' || t.status === f) && [t.name, t.phone, t.ticket_id, t.sold_by, t.checked_in_by].some(v => (v || '').toLowerCase().includes(q)));
   $('list').innerHTML = rows.map(t => {
     const st = t.status === 'CHECKED_IN' ? '<span class="st in">In</span>' : t.status === 'PARTIAL' ? `<span class="st part">${t.admitted} of ${t.admits} in</span>` : '<span class="st">Not in</span>';
-    return `<div class="item"><div><div class="n">${esc(nm(t.name))}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">${t.price != null ? `<span class="amt">${esc(money(t.price))}</span> · ${esc(t.payment || '-')}` : ''}${t.sold_by ? (t.price != null ? ' · ' : '') + 'Sold by ' + esc(t.sold_by) + (t.sold_by_role === 'admin' ? ' <span class="tag">Admin</span>' : '') : ''}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
+    return `<div class="item"><div><div class="n">${esc(nm(t.name))}</div><div class="m"><span class="id">${esc(t.ticket_id)}</span> · ${esc(t.tier)} · ${esc(t.phone)}</div><div class="m">Issued ${esc(when(t.created_at))}</div><div class="m">${t.price != null ? `<span class="amt">${esc(money(t.price))}</span> · ${esc(t.payment || '-')}` : ''}${t.sold_by ? (t.price != null ? ' · ' : '') + 'Sold by ' + esc(t.sold_by) + (t.sold_by_role === 'admin' ? ' <span class="tag">Admin</span>' : '') : ''}${t.checked_in_by ? ' · scanned by ' + esc(t.checked_in_by) : ''}</div></div>
       <div>${st}<div class="mini"><button data-a="view" data-id="${esc(t.ticket_id)}">View</button><button class="admin-only" data-a="del" data-id="${esc(t.ticket_id)}">Delete</button></div></div></div>`;
   }).join('') || '<div class="empty">No tickets match. Issue one from the Issue tab.</div>';
 }
@@ -386,8 +387,8 @@ $('list').onclick = async e => {
 $('search').oninput = $('filter').onchange = renderList;
 $('csvBtn').onclick = () => {
   const cell = v => { v = String(v ?? ''); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
-  const head = ['Ticket ID', 'Name', 'Phone', 'Type', 'Price', 'Payment', 'Sold by', 'Status', 'Admitted', 'Admits', 'Scanned by', 'Scan time'];
-  const lines = tickets.map(t => [t.ticket_id, t.name, t.phone, t.tier, t.price, t.payment, t.sold_by, t.status, t.admitted, t.admits, t.checked_in_by, t.check_in_time ? new Date(t.check_in_time).toLocaleString() : ''].map(cell).join(','));
+  const head = ['Ticket ID', 'Name', 'Phone', 'Type', 'Price', 'Payment', 'Sold by', 'Issued at', 'Status', 'Admitted', 'Admits', 'Scanned by', 'Scan time'];
+  const lines = tickets.map(t => [t.ticket_id, t.name, t.phone, t.tier, t.price, t.payment, t.sold_by, when(t.created_at), t.status, t.admitted, t.admits, t.checked_in_by, t.check_in_time ? new Date(t.check_in_time).toLocaleString() : ''].map(cell).join(','));
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + [head.map(cell).join(','), ...lines].join('\n')], {type: 'text/csv'}));
   a.download = `tickets_${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
 };
